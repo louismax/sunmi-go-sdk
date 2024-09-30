@@ -92,3 +92,31 @@ func (p *PrintObject) HorizontalTab(n ...int) {
 		p.Content += "09"
 	}
 }
+
+// SetAbsolutePrintPosition [ESC $] 设置绝对打印位置.
+func (p *PrintObject) SetAbsolutePrintPosition(n int) {
+	if n >= 0 && n <= 65535 {
+		p.Content += "1b24" + p.numToHexStr(n, 2)
+	}
+}
+
+// SetRelativePrintPosition [ESC \] 设置相对打印位置.
+func (p *PrintObject) SetRelativePrintPosition(n int) {
+	if n >= -32768 && n <= 32767 {
+		p.Content += "1b5c" + p.numToHexStr(n, 2)
+	}
+}
+
+// SetAlignment [ESC a] 设置对齐方式.
+func (p *PrintObject) SetAlignment(n int) {
+	if n >= 0 && n <= 2 {
+		p.Content += "1b61" + p.numToHexStr(n, 1)
+	}
+}
+
+// SetUnderlineMode [ESC -] 设置下划线模式.
+func (p *PrintObject) SetUnderlineMode(n int) {
+	if n >= 0 && n <= 2 {
+		p.Content += "1b2d" + p.numToHexStr(n, 1)
+	}
+}
