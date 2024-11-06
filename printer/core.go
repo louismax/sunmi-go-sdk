@@ -19,18 +19,36 @@ const (
 	COLUMN_FLAG_DOUBLE_W   = 1 << 3
 )
 
-type PrintObject struct {
-	Content   string
-	CharHSize int
+type ColumnSettings struct {
+	Width     int
+	Alignment int
+	Flag      int
 }
 
-var (
-	dotsPerLine = 384 // Print width in dots. 384 for 58mm and 576 for 80mm
-	//charHSize      = 1
-	asciiCharWidth = 12
-	cjkCharWidth   = 24
-	columnSettings []int
-)
+type PrintObject struct {
+	Content        string
+	CharHSize      int
+	DotsPerLine    int
+	AsciiCharWidth int
+	CjkCharWidth   int
+	ColumnSettings []ColumnSettings
+}
+
+func NewPrint(param ...int) *PrintObject {
+	_dotsPerLine := 384 // 以网点为单位的打印宽度,58mm为384,80mm为576
+	if len(param) > 0 {
+		_dotsPerLine = param[0]
+	}
+
+	return &PrintObject{
+		Content:        "",
+		CharHSize:      1,
+		DotsPerLine:    _dotsPerLine,
+		AsciiCharWidth: 12,
+		CjkCharWidth:   24,
+		ColumnSettings: make([]ColumnSettings, 0),
+	}
+}
 
 func (p *PrintObject) numToHexStr(n int, bytes int) string {
 	str := ""

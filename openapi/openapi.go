@@ -9,7 +9,7 @@ const (
 	DeviceClearPrintJobUrl string = "/v2/printer/open/open/device/clearPrintJob"
 	DevicePushVoiceUrl     string = "/v2/printer/open/open/device/pushVoice"
 	TicketPrintStatusUrl   string = "/v2/printer/open/open/ticket/printStatus"
-	DevicePushContentUrl   string = "//v2/printer/open/open/device/pushContent"
+	DevicePushContentUrl   string = "/v2/printer/open/open/device/pushContent"
 )
 
 // DeviceBindShop 打印机绑定店铺
