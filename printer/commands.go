@@ -1,6 +1,11 @@
 package printer
 
-import "unicode/utf8"
+import (
+	"golang.org/x/image/draw"
+	"image"
+	"os"
+	"unicode/utf8"
+)
 
 // Append raw data.
 func (p *PrintObject) appendRawData(data string) {
@@ -166,17 +171,11 @@ func (p *PrintObject) PostponedCutPaper(ok bool, n int) {
 //////////////////////////////////////////////////
 
 // SetCjkEncoding (effective when UTF-8 mode is disabled).
-//
-//	n  encoding
-//
-// ---  --------
-//
 //	 0  GB18030
 //	 1  BIG5
 //	11  Shift_JIS
-//	12  JIS 0208.
-//	21  KS C 5601.
-//
+//	12  JIS 0208
+//	21  KS C 5601
 // 128  Disable CJK mode
 // 255  Restore to default
 func (p *PrintObject) SetCjkEncoding(n int) {
@@ -186,14 +185,8 @@ func (p *PrintObject) SetCjkEncoding(n int) {
 }
 
 // SetUtf8Mode .
-//
-//	n  mode
-//
-// ---  ----
-//
 //	0  Disabled
 //	1  Enabled
-//
 // 255  Restore to default
 func (p *PrintObject) SetUtf8Mode(n int) {
 	if n >= 0 && n <= 255 {
@@ -232,14 +225,8 @@ func (p *PrintObject) SelectAsciiCharFont(n int) {
 }
 
 // SelectCjkCharFont Select font for CJK characters.
-//
-//	n  font
-//
-// -----  ----
-//
 //	0  Built-in lattice font
 //	1  Built-in vector font
-//
 // >=128  The (n-128)th custom vector font
 func (p *PrintObject) SelectCjkCharFont(n int) {
 	if n >= 0 && n <= 255 {
@@ -248,13 +235,7 @@ func (p *PrintObject) SelectCjkCharFont(n int) {
 }
 
 // SelectOtherCharFont Select font for other characters.
-//
-//	n  font
-//
-// -----  ----
-//
 //	0,1  Built-in vector font
-//
 // >=128  The (n-128)th custom vector font
 func (p *PrintObject) SelectOtherCharFont(n int) {
 	if n >= 0 && n <= 255 {
@@ -277,8 +258,6 @@ func (p *PrintObject) SetPrintSpeed(n int) {
 }
 
 // SetCutterMode  Set cutter mode.
-// n  mode
-// -  ----
 // 0  Perform full-cut or partial-cut according to the cutting command
 // 1  Perform partial-cut always on any cutting command
 // 2  Perform full-cut always on any cutting command
@@ -452,6 +431,7 @@ func (p *PrintObject) PrintInColumns(texts []string) {
 // 条码和二维码打印
 //////////////////////////////////////////////////
 
+// AppendBarcode 添加条形码 常用barcodeType 73 Code_128
 func (p *PrintObject) AppendBarcode(hriPos, height, moduleSize, barcodeType int, text string) {
 	textLength := len(text)
 
@@ -483,6 +463,7 @@ func (p *PrintObject) AppendBarcode(hriPos, height, moduleSize, barcodeType int,
 	}
 }
 
+// AppendQRCode 添加二维码
 func (p *PrintObject) AppendQRCode(moduleSize, ecLevel int, text string) {
 	content := ""
 	for _, r := range text {
@@ -513,5 +494,249 @@ func (p *PrintObject) AppendQRCode(moduleSize, ecLevel int, text string) {
 	p.Content += "1d286b" + p.numToHexStr(textLength+3, 2) + "315030"
 	p.Content += content
 	p.Content += "1d286b0300315130"
+}
 
+//////////////////////////////////////////////////
+// 图像打印
+//////////////////////////////////////////////////
+// Grayscale to monochrome - diffuse dithering algorithm.
+func (p *PrintObject) diffuseDither(srcData [][]int, width int, height int) []int {
+	if width <= 0 || height <= 0 {
+		return []int{}
+	}
+
+	bmwidth := (width + 7) / 8
+	dstData := make([]int, bmwidth*height)
+	lineBuffer := make([][]int, 2)
+	lineBuffer[0] = make([]int, width)
+	lineBuffer[1] = make([]int, width)
+	line1 := 0
+	line2 := 1
+
+	for i := 0; i < width; i++ {
+		lineBuffer[0][i] = 0
+		lineBuffer[1][i] = srcData[0][i]
+	}
+
+	for y := 0; y < height; y++ {
+		tmp := line1
+		line1 = line2
+		line2 = tmp
+		notLastLine := y < height-1
+
+		if notLastLine {
+			for i := 0; i < width; i++ {
+				lineBuffer[line2][i] = srcData[y+1][i]
+			}
+		}
+
+		q := y * bmwidth
+		for i := 0; i < bmwidth; i++ {
+			dstData[q] = 0
+			q++
+		}
+
+		b1 := 0
+		b2 := 0
+		q = y * bmwidth
+		mask := 0x80
+
+		for x := 1; x <= width; x++ {
+			var err int
+			if lineBuffer[line1][b1] < 128 { // Black pixel
+				err = lineBuffer[line1][b1]
+				dstData[q] |= mask
+			} else {
+				err = lineBuffer[line1][b1] - 255
+			}
+			b1++
+			if mask == 1 {
+				q++
+				mask = 0x80
+			} else {
+				mask >>= 1
+			}
+			e7 := (err*7 + 8) >> 4
+			e5 := (err*5 + 8) >> 4
+			e3 := (err*3 + 8) >> 4
+			e1 := err - (e7 + e5 + e3)
+			if x < width {
+				lineBuffer[line1][b1] += e7
+			}
+			if notLastLine {
+				lineBuffer[line2][b2] += e5
+				if x > 1 {
+					lineBuffer[line2][b2-1] += e3
+				}
+				if x < width {
+					lineBuffer[line2][b2+1] += e1
+				}
+			}
+			b2++
+		}
+	}
+	return dstData
+}
+
+// Grayscale to monochrome - threshold dithering algorithm.
+func (p *PrintObject) thresholdDither(srcData [][]int, width int, height int) []int {
+	if width <= 0 || height <= 0 {
+		return []int{}
+	}
+
+	bmwidth := (width + 7) / 8
+	dstData := make([]int, bmwidth*height)
+	q := 0
+
+	for y := 0; y < height; y++ {
+		k := q
+		mask := 0x80
+		for x := 0; x < width; x++ {
+			if srcData[y][x] < 128 { // Black pixel
+				dstData[k] |= mask
+			}
+			if mask == 1 {
+				k++
+				mask = 0x80
+			} else {
+				mask >>= 1
+			}
+		}
+		q += bmwidth
+	}
+	return dstData
+}
+
+// Convert image pixel data from RGB to grayscale.
+func (p *PrintObject) convertToGray(img image.Image) [][]int {
+	width, height := img.Bounds().Max.X, img.Bounds().Max.Y
+	data := make([][]int, height)
+	grayData := make([][]int, height)
+	for i := range data {
+		data[i] = make([]int, width)
+		grayData[i] = make([]int, width)
+	}
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			grayData[y][x] = int((r*11+g*16+b*5)/32) & 0xff
+		}
+	}
+	return grayData
+}
+
+// AppendImage an image.
+func (p *PrintObject) AppendImage(imageFile string, mode int, width int) {
+	imgOrg, err := openImage(imageFile)
+	if err != nil {
+		return
+	}
+
+	if width == 0 {
+		width = p.DotsPerLine
+	}
+	w, h := imgOrg.Bounds().Max.X, imgOrg.Bounds().Max.Y
+	if w > width {
+		h = width * h / w
+		w = width
+		imgRes := resizeImage(imgOrg, w, h)
+		grayData := p.convertToGray(imgRes)
+		var monoData []int
+		if mode == DIFFUSE_DITHER {
+			monoData = p.diffuseDither(grayData, w, h)
+		} else if mode == THRESHOLD_DITHER {
+			monoData = p.thresholdDither(grayData, w, h)
+		} else {
+			return
+		}
+
+		w = (w + 7) / 8
+		p.Content += "1d763000"
+		p.Content += p.numToHexStr(w, 2)
+		p.Content += p.numToHexStr(h, 2)
+		for _, r := range monoData {
+			p.Content += p.numToHexStr(r, 1)
+		}
+	}
+}
+
+func openImage(imageFile string) (image.Image, error) {
+	file, err := os.Open(imageFile)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	img, _, err := image.Decode(file)
+	return img, err
+}
+
+func resizeImage(img image.Image, width, height int) image.Image {
+	dst := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.CatmullRom.Scale(dst, dst.Rect, img, img.Bounds(), draw.Over, nil)
+	return dst
+}
+
+//////////////////////////////////////////////////
+// 页面模式命令
+//////////////////////////////////////////////////
+
+// EnterPageMode [ESC L] 进入页面模式。
+func (p *PrintObject) EnterPageMode() {
+	p.Content += "1b4c"
+}
+
+// SetPrintAreaInPageMode [ESC W] 在页面模式下设置打印区域。
+// x, y: 打印区域的起源
+// w, h: 打印区域的宽度和高度
+func (p *PrintObject) SetPrintAreaInPageMode(x, y, w, h int) {
+	p.Content += "1b57"
+	p.Content += p.numToHexStr(x, 2)
+	p.Content += p.numToHexStr(y, 2)
+	p.Content += p.numToHexStr(w, 2)
+	p.Content += p.numToHexStr(h, 2)
+}
+
+// SetPrintDirectionInPageMode [ESC T] 在页面模式下选择打印方向。
+// dir: 0:正常的; 1:顺时针旋转90度; 2:顺时针旋转180度; 3:顺时针旋转270度
+func (p *PrintObject) SetPrintDirectionInPageMode(dir int) {
+	if dir >= 0 && dir <= 3 {
+		p.Content += "1b54" + p.numToHexStr(dir, 1)
+	}
+}
+
+// SetAbsoluteVerticalPrintPositionInPageMode [GS $] 在页面模式下设置绝对垂直打印位置
+func (p *PrintObject) SetAbsoluteVerticalPrintPositionInPageMode(n int) {
+	if n >= 0 && n <= 65535 {
+		p.Content += "1d24" + p.numToHexStr(n, 2)
+	}
+}
+
+// SetRelativeVerticalPrintPositionInPageMode [GS \] 在页面模式下设置相对垂直打印位置.
+func (p *PrintObject) SetRelativeVerticalPrintPositionInPageMode(n int) {
+	if n >= -32768 && n <= 32767 {
+		p.Content += "1d5c" + p.numToHexStr(n, 2)
+	}
+}
+
+// printAndExitPageMode [FF] 在缓冲区中打印数据并退出页面模式. NT211、NT212不支持页模式
+func (p *PrintObject) printAndExitPageMode() {
+	p.Content += "0c"
+}
+
+// PrintInPageMode [ESC FF] 在缓冲区中打印数据(并保持在页面模式). NT211、NT212不支持页模式
+func (p *PrintObject) PrintInPageMode() {
+	p.Content += "1b0c"
+}
+
+// ClearInPageMode [CAN] 清除缓冲区中的数据(并保持页面模式). NT211、NT212不支持页模式。
+func (p *PrintObject) ClearInPageMode() {
+	p.Content += "18"
+}
+
+// ExitPageMode [ESC S] 退出页面模式并丢弃缓冲区中的数据而不打印.
+func (p *PrintObject) ExitPageMode() {
+	p.Content += "1b53"
 }
