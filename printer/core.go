@@ -13,10 +13,10 @@ const (
 	DIFFUSE_DITHER   = 0
 	THRESHOLD_DITHER = 2
 
-	COLUMN_FLAG_BW_REVERSE = 1 << 0
-	COLUMN_FLAG_BOLD       = 1 << 1
-	COLUMN_FLAG_DOUBLE_H   = 1 << 2
-	COLUMN_FLAG_DOUBLE_W   = 1 << 3
+	COLUMN_FLAG_BW_REVERSE = 1 << 0 //黑白反转
+	COLUMN_FLAG_BOLD       = 1 << 1 //加粗
+	COLUMN_FLAG_DOUBLE_H   = 1 << 2 //倍高
+	COLUMN_FLAG_DOUBLE_W   = 1 << 3 //倍宽
 )
 
 type ColumnSettings struct {

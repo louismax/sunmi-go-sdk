@@ -171,11 +171,13 @@ func (p *PrintObject) PostponedCutPaper(ok bool, n int) {
 //////////////////////////////////////////////////
 
 // SetCjkEncoding (effective when UTF-8 mode is disabled).
+//
 //	 0  GB18030
 //	 1  BIG5
 //	11  Shift_JIS
 //	12  JIS 0208
 //	21  KS C 5601
+//
 // 128  Disable CJK mode
 // 255  Restore to default
 func (p *PrintObject) SetCjkEncoding(n int) {
@@ -185,8 +187,10 @@ func (p *PrintObject) SetCjkEncoding(n int) {
 }
 
 // SetUtf8Mode .
+//
 //	0  Disabled
 //	1  Enabled
+//
 // 255  Restore to default
 func (p *PrintObject) SetUtf8Mode(n int) {
 	if n >= 0 && n <= 255 {
@@ -225,8 +229,10 @@ func (p *PrintObject) SelectAsciiCharFont(n int) {
 }
 
 // SelectCjkCharFont Select font for CJK characters.
+//
 //	0  Built-in lattice font
 //	1  Built-in vector font
+//
 // >=128  The (n-128)th custom vector font
 func (p *PrintObject) SelectCjkCharFont(n int) {
 	if n >= 0 && n <= 255 {
@@ -235,7 +241,9 @@ func (p *PrintObject) SelectCjkCharFont(n int) {
 }
 
 // SelectOtherCharFont Select font for other characters.
+//
 //	0,1  Built-in vector font
+//
 // >=128  The (n-128)th custom vector font
 func (p *PrintObject) SelectOtherCharFont(n int) {
 	if n >= 0 && n <= 255 {
@@ -496,9 +504,9 @@ func (p *PrintObject) AppendQRCode(moduleSize, ecLevel int, text string) {
 	p.Content += "1d286b0300315130"
 }
 
-//////////////////////////////////////////////////
+// ////////////////////////////////////////////////
 // 图像打印
-//////////////////////////////////////////////////
+// ////////////////////////////////////////////////
 // Grayscale to monochrome - diffuse dithering algorithm.
 func (p *PrintObject) diffuseDither(srcData [][]int, width int, height int) []int {
 	if width <= 0 || height <= 0 {
