@@ -17,12 +17,12 @@ func NewHmacClient(appId, appKey string) *openapi.HmacClient {
 
 // NewRsaClient return a rsa client
 func NewRsaClient(appId, privateKey, publicKey string) (*openapi.RsaClient, error) {
-	privBlock, _ := pem.Decode([]byte(privateKey))
-	if privBlock == nil {
+	prvBlock, _ := pem.Decode([]byte(privateKey))
+	if prvBlock == nil {
 		return nil, openapi.PrivateKeyErr
 	}
 
-	priv, err := x509.ParsePKCS8PrivateKey(privBlock.Bytes)
+	prv, err := x509.ParsePKCS8PrivateKey(prvBlock.Bytes)
 	if err != nil {
 		return nil, openapi.PrivateKeyErr
 	}
@@ -40,6 +40,6 @@ func NewRsaClient(appId, privateKey, publicKey string) (*openapi.RsaClient, erro
 	return &openapi.RsaClient{
 		AppId:      appId,
 		PublicKey:  pub,
-		PrivateKey: priv.(*rsa.PrivateKey),
+		PrivateKey: prv.(*rsa.PrivateKey),
 	}, nil
 }
