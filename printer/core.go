@@ -3,20 +3,20 @@ package printer
 import "fmt"
 
 const (
-	ALIGN_LEFT   = 0 // Left alignment
-	ALIGN_CENTER = 1 // Center alignment
-	ALIGN_RIGHT  = 2 // Right alignment
+	AlignLeft   = 0 // Left alignment
+	AlignCenter = 1 // Center alignment
+	AlignRight  = 2 // Right alignment
 
-	HRI_POS_ABOVE = 1 // HRI above the barcode
-	HRI_POS_BELOW = 2 // HRI below the barcode
+	//HRI_POS_ABOVE = 1 // HRI above the barcode
+	//HRI_POS_BELOW = 2 // HRI below the barcode
 
-	DIFFUSE_DITHER   = 0
-	THRESHOLD_DITHER = 2
+	DiffuseDither   = 0
+	ThresholdDither = 2
 
-	COLUMN_FLAG_BW_REVERSE = 1 << 0 //黑白反转
-	COLUMN_FLAG_BOLD       = 1 << 1 //加粗
-	COLUMN_FLAG_DOUBLE_H   = 1 << 2 //倍高
-	COLUMN_FLAG_DOUBLE_W   = 1 << 3 //倍宽
+	ColumnFlagBwReverse = 1 << 0 //黑白反转
+	ColumnFlagBold      = 1 << 1 //加粗
+	ColumnFlagDoubleH   = 1 << 2 //倍高
+	ColumnFlagDoubleW   = 1 << 3 //倍宽
 )
 
 type ColumnSettings struct {
@@ -41,7 +41,7 @@ func NewPrint(param ...int) *PrintObject {
 	}
 
 	return &PrintObject{
-		Content:        "",
+		Content:        "1b401b32", //[ESC @] 恢复默认设置+[ESC 2] 恢复默认行距
 		CharHSize:      1,
 		DotsPerLine:    _dotsPerLine,
 		AsciiCharWidth: 12,

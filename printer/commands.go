@@ -1,11 +1,23 @@
 package printer
 
 import (
+	"github.com/mattn/go-runewidth"
 	"golang.org/x/image/draw"
 	"image"
 	"os"
+	"regexp"
 	"unicode/utf8"
 )
+
+var stripAnsiEscapeRegexp = regexp.MustCompile(`(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]`)
+
+func stripAnsiEscape(s string) string {
+	return stripAnsiEscapeRegexp.ReplaceAllString(s, "")
+}
+
+func realLength(s string) int {
+	return runewidth.StringWidth(stripAnsiEscape(s))
+}
 
 // Append raw data.
 func (p *PrintObject) appendRawData(data string) {
@@ -24,6 +36,70 @@ func (p *PrintObject) AppendText(str string) {
 	for _, r := range str {
 		p.Content += p.unicodeToUtf8(int(r))
 	}
+}
+
+// AppendDivider 添加分割线(设置字符大小1-1,设置居中,LF)
+func (p *PrintObject) AppendDivider(data ...string) {
+	p.SetCharacterSize(1, 1)
+	p.SetAlignment(AlignCenter)
+	if p.DotsPerLine == 384 {
+		if len(data) < 1 {
+			str := ""
+			for i := 0; i < 32; i++ {
+				str += "-"
+			}
+			p.AppendText(str)
+		} else {
+			s := ""
+			if realLength(data[0])%2 == 0 {
+				s = data[0]
+			} else { //如果是奇数,需要补一个空格保证左右分割线一致
+				s = " " + data[0]
+			}
+			if realLength(s) > 32 {
+				return
+			} else if realLength(s) == 32 {
+				p.AppendText(s)
+			} else {
+				for i := 0; i < (32-realLength(s))/2; i++ {
+					p.AppendText("-")
+				}
+				p.AppendText(s)
+				for i := 0; i < (32-realLength(s))/2; i++ {
+					p.AppendText("-")
+				}
+			}
+		}
+	} else if p.DotsPerLine == 576 {
+		if len(data) < 1 {
+			str := ""
+			for i := 0; i < 48; i++ {
+				str += "-"
+			}
+			p.AppendText(str)
+		} else {
+			s := ""
+			if realLength(data[0])%2 == 0 {
+				s = data[0]
+			} else { //如果是奇数,需要补一个空格保证左右分割线一致
+				s = " " + data[0]
+			}
+			if realLength(s) > 48 {
+				return
+			} else if realLength(s) == 48 {
+				p.AppendText(s)
+			} else {
+				for i := 0; i < (48-realLength(s))/2; i++ {
+					p.AppendText("-")
+				}
+				p.AppendText(s)
+				for i := 0; i < (48-realLength(s))/2; i++ {
+					p.AppendText("-")
+				}
+			}
+		}
+	}
+	p.LineFeed()
 }
 
 // LineFeed [LF]打印缓冲区和进纸行中的数据
@@ -143,6 +219,15 @@ func (p *PrintObject) SetUpsideDownMode(ok bool) {
 		p.Content += "1b7b01"
 	} else {
 		p.Content += "1b7b00"
+	}
+}
+
+// SetBold [ESC E] 设置倒立模式.
+func (p *PrintObject) SetBold(ok bool) {
+	if ok {
+		p.Content += "1b4501"
+	} else {
+		p.Content += "1b4500"
 	}
 }
 
@@ -382,7 +467,7 @@ func (p *PrintObject) PrintInColumns(texts []string) {
 					break
 				} else {
 					w := p.WidthOfChar(r) * p.CharHSize
-					if flag&COLUMN_FLAG_DOUBLE_W != 0 {
+					if flag&ColumnFlagDoubleW != 0 {
 						w *= 2
 					}
 					if strwidth[i]+w > width {
@@ -408,20 +493,20 @@ func (p *PrintObject) PrintInColumns(texts []string) {
 			default:
 				p.SetAbsolutePrintPosition(pos)
 			}
-			if flag&COLUMN_FLAG_BW_REVERSE != 0 {
+			if flag&ColumnFlagBwReverse != 0 {
 				p.SetBlackWhiteReverseMode(true)
 			}
-			if flag&(COLUMN_FLAG_BOLD|COLUMN_FLAG_DOUBLE_H|COLUMN_FLAG_DOUBLE_W) != 0 {
-				bold := flag&COLUMN_FLAG_BOLD != 0
-				doubleH := flag&COLUMN_FLAG_DOUBLE_H != 0
-				doubleW := flag&COLUMN_FLAG_DOUBLE_W != 0
+			if flag&(ColumnFlagBold|ColumnFlagDoubleH|ColumnFlagDoubleW) != 0 {
+				bold := flag&ColumnFlagBold != 0
+				doubleH := flag&ColumnFlagDoubleH != 0
+				doubleW := flag&ColumnFlagDoubleW != 0
 				p.SetPrintModes(bold, doubleH, doubleW)
 			}
 			p.AppendText(strcur[i])
-			if flag&(COLUMN_FLAG_BOLD|COLUMN_FLAG_DOUBLE_H|COLUMN_FLAG_DOUBLE_W) != 0 {
+			if flag&(ColumnFlagBold|ColumnFlagDoubleH|ColumnFlagDoubleW) != 0 {
 				p.SetPrintModes(false, false, false)
 			}
-			if flag&COLUMN_FLAG_BW_REVERSE != 0 {
+			if flag&ColumnFlagBwReverse != 0 {
 				p.SetBlackWhiteReverseMode(false)
 			}
 			pos += width
@@ -650,9 +735,9 @@ func (p *PrintObject) AppendImage(imageFile string, mode int, width int) {
 		imgRes := resizeImage(imgOrg, w, h)
 		grayData := p.convertToGray(imgRes)
 		var monoData []int
-		if mode == DIFFUSE_DITHER {
+		if mode == DiffuseDither {
 			monoData = p.diffuseDither(grayData, w, h)
-		} else if mode == THRESHOLD_DITHER {
+		} else if mode == ThresholdDither {
 			monoData = p.thresholdDither(grayData, w, h)
 		} else {
 			return
