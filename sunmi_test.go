@@ -22,7 +22,7 @@ func TestDeviceOnlineStatus(t *testing.T) {
 }
 
 func TestPrint(t *testing.T) {
-	p := printer.PrintObject{}
+	p := printer.NewPrint()
 
 	p.SetCharacterSize(8, 8)
 

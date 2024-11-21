@@ -222,7 +222,7 @@ func (p *PrintObject) SetUpsideDownMode(ok bool) {
 	}
 }
 
-// SetBold [ESC E] 设置倒立模式.
+// SetBold [ESC E] 设置加粗.
 func (p *PrintObject) SetBold(ok bool) {
 	if ok {
 		p.Content += "1b4501"
