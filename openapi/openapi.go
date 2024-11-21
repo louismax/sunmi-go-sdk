@@ -1,6 +1,6 @@
 package openapi
 
-const OPENAPIURL string = "https://openapi.sunmi.com"
+const APIURL string = "https://openapi.sunmi.com"
 
 const (
 	DeviceBindShopUrl      string = "/v2/printer/open/open/device/bindShop"
@@ -14,7 +14,7 @@ const (
 
 // DeviceBindShop 打印机绑定店铺
 func (c *HmacClient) DeviceBindShop(sn string, shopId int) ([]byte, error) {
-	return c.Request(OPENAPIURL+DeviceBindShopUrl, map[string]interface{}{
+	return c.Request(APIURL+DeviceBindShopUrl, map[string]interface{}{
 		"sn":      sn,
 		"shop_id": shopId,
 	}, map[string]string{
@@ -25,7 +25,7 @@ func (c *HmacClient) DeviceBindShop(sn string, shopId int) ([]byte, error) {
 
 // DeviceUnbindShop 打印机解绑店铺
 func (c *HmacClient) DeviceUnbindShop(sn string, shopId int) ([]byte, error) {
-	return c.Request(OPENAPIURL+DeviceUnbindShopUrl, map[string]interface{}{
+	return c.Request(APIURL+DeviceUnbindShopUrl, map[string]interface{}{
 		"sn":      sn,
 		"shop_id": shopId,
 	}, map[string]string{
@@ -44,7 +44,7 @@ func (c *HmacClient) DeviceOnlineStatus(sn string, pageNo, pageSize int) ([]byte
 		req["page_no"] = pageNo
 		req["page_size"] = pageSize
 	}
-	return c.Request(OPENAPIURL+DeviceOnlineStatusUrl, req, map[string]string{
+	return c.Request(APIURL+DeviceOnlineStatusUrl, req, map[string]string{
 		//"Connection":   "no-cache",
 		"Source":       "openapi",
 		"Content-Type": "application/json",
@@ -54,7 +54,7 @@ func (c *HmacClient) DeviceOnlineStatus(sn string, pageNo, pageSize int) ([]byte
 
 // DeviceClearPrintJob 清除云端缓存的打印队列
 func (c *HmacClient) DeviceClearPrintJob(sn string) ([]byte, error) {
-	return c.Request(OPENAPIURL+DeviceClearPrintJobUrl, map[string]interface{}{
+	return c.Request(APIURL+DeviceClearPrintJobUrl, map[string]interface{}{
 		"sn": sn,
 	}, map[string]string{
 		"Source":       "openapi",
@@ -84,7 +84,7 @@ func (c *HmacClient) DevicePushVoice(sn, content, mediaUrl string, expireIn, cyc
 		req["interval"] = interval
 	}
 
-	return c.Request(OPENAPIURL+DevicePushVoiceUrl, req, map[string]string{
+	return c.Request(APIURL+DevicePushVoiceUrl, req, map[string]string{
 		"Source":       "openapi",
 		"Content-Type": "application/json",
 	})
@@ -92,7 +92,7 @@ func (c *HmacClient) DevicePushVoice(sn, content, mediaUrl string, expireIn, cyc
 
 // TicketPrintStatus 查询订单打印状态
 func (c *HmacClient) TicketPrintStatus(tradeNo string) ([]byte, error) {
-	return c.Request(OPENAPIURL+TicketPrintStatusUrl, map[string]interface{}{
+	return c.Request(APIURL+TicketPrintStatusUrl, map[string]interface{}{
 		"trade_no": tradeNo,
 	}, map[string]string{
 		"Source":       "openapi",
@@ -123,7 +123,7 @@ func (c *HmacClient) DevicePushContent(sn, tradeNo, content, mediaText, mediaUrl
 		req["cycle"] = cycle
 	}
 
-	return c.Request(OPENAPIURL+DevicePushContentUrl, req, map[string]string{
+	return c.Request(APIURL+DevicePushContentUrl, req, map[string]string{
 		"Source":       "openapi",
 		"Content-Type": "application/json",
 	})
